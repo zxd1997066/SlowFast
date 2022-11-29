@@ -59,6 +59,18 @@ def parse_args():
         default=None,
         nargs=argparse.REMAINDER,
     )
+    # for oob
+    parser.add_argument('--dataset_dir', type=str, default='./', help='dataset_dir')
+    parser.add_argument('--batch_size', type=int, default=1, help='batch_size')
+    parser.add_argument('--precision', type=str, default='float32', help='precision')
+    parser.add_argument('--channels_last', type=int, default=1, help='use channels last format')
+    parser.add_argument('--num_iter', type=int, default=-1, help='num_iter')
+    parser.add_argument('--num_warmup', type=int, default=-1, help='num_warmup')
+    parser.add_argument('--profile', dest='profile', action='store_true', help='profile')
+    parser.add_argument('--quantized_engine', type=str, default=None, help='quantized_engine')
+    parser.add_argument('--ipex', dest='ipex', action='store_true', help='ipex')
+    parser.add_argument('--jit', dest='jit', action='store_true', help='jit')
+
     if len(sys.argv) == 1:
         parser.print_help()
     return parser.parse_args()
@@ -88,6 +100,16 @@ def load_config(args, path_to_config=None):
         cfg.RNG_SEED = args.rng_seed
     if hasattr(args, "output_dir"):
         cfg.OUTPUT_DIR = args.output_dir
+
+    # for oob
+    cfg.precision = args.precision
+    cfg.channels_last = args.channels_last
+    cfg.num_iter = args.num_iter
+    cfg.num_warmup = args.num_warmup
+    cfg.profile = args.profile
+    cfg.quantized_engine = args.quantized_engine
+    cfg.ipex = args.ipex
+    cfg.jit = args.jit
 
     # Create the checkpoint dir.
     cu.make_checkpoint_dir(cfg.OUTPUT_DIR)

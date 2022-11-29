@@ -5,6 +5,7 @@
 
 import numpy as np
 import os
+import time
 import pickle
 import torch
 
@@ -22,7 +23,7 @@ logger = logging.get_logger(__name__)
 
 
 @torch.no_grad()
-def perform_test(test_loader, model, test_meter, cfg, writer=None):
+def perform_test(test_loader, model, test_meter, cfg, writer=None, p=None):
     """
     For classification:
     Perform mutli-view testing that uniformly samples N clips from a video along
@@ -44,13 +45,22 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
     """
     # Enable eval mode.
     model.eval()
+    # CL
+    if cfg.channels_last:
+        model = model.to(memory_format=torch.channels_last_3d)
+        print("---- Use CL model.")
+
     test_meter.iter_tic()
 
-    for cur_iter, (inputs, labels, video_idx, time, meta) in enumerate(
+    total_time = 0.0
+    total_sample = 0
+    for cur_iter, (inputs, labels, video_idx, time_, meta) in enumerate(
         test_loader
     ):
-
-        if cfg.NUM_GPUS:
+        if cfg.num_iter > 0 and cur_iter >= cfg.num_iter: break
+        input_cuda_time = 0.0
+        if torch.cuda.is_available(): # cfg.NUM_GPUS:
+            input_cuda_time = time.time()
             # Transfer the data to the current GPU device.
             if isinstance(inputs, (list,)):
                 for i in range(len(inputs)):
@@ -66,11 +76,15 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
                         val[i] = val[i].cuda(non_blocking=True)
                 else:
                     meta[key] = val.cuda(non_blocking=True)
+            input_cuda_time = time.time() - input_cuda_time
         test_meter.data_toc()
 
         if cfg.DETECTION.ENABLE:
             # Compute the predictions.
+            tic = time.time()
             preds = model(inputs, meta["boxes"])
+            if torch.cuda.is_available(): torch.cuda.synchronize()
+            toc = time.time()
             ori_boxes = meta["ori_boxes"]
             metadata = meta["metadata"]
 
@@ -95,13 +109,16 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
             if not cfg.CONTRASTIVE.KNN_ON:
                 test_meter.finalize_metrics()
                 return test_meter
-            # preds = model(inputs, video_idx, time)
+            # preds = model(inputs, video_idx, time_)
             train_labels = (
                 model.module.train_labels
                 if hasattr(model, "module")
                 else model.train_labels
             )
-            yd, yi = model(inputs, video_idx, time)
+            tic = time.time()
+            yd, yi = model(inputs, video_idx, time_)
+            if torch.cuda.is_available(): torch.cuda.synchronize()
+            toc = time.time()
             batchSize = yi.shape[0]
             K = yi.shape[1]
             C = cfg.CONTRASTIVE.NUM_CLASSES_DOWNSTREAM  # eg 400 for Kinetics400
@@ -117,7 +134,16 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
             preds = torch.sum(probs, 1)
         else:
             # Perform the forward pass.
+            tic = time.time()
             preds = model(inputs)
+            if torch.cuda.is_available(): torch.cuda.synchronize()
+            toc = time.time()
+        if cfg.profile:
+            p.step()
+        print("Iteration: {}, inference time: {} sec.".format(cur_iter, toc - tic + input_cuda_time), flush=True)
+        if cur_iter >= cfg.num_warmup:
+            total_time += toc - tic + input_cuda_time
+            total_sample += cfg.TEST.BATCH_SIZE
 
         # Gather all the predictions across all the devices to perform ensemble.
         if cfg.NUM_GPUS > 1:
@@ -134,7 +160,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
         # test_meter.update_stats(
         #     preds.detach(), labels.detach(), video_idx.detach()
         # )
-        test_meter.log_iter_stats(cur_iter)
+        # test_meter.log_iter_stats(cur_iter)
 
         test_meter.iter_tic()
 
@@ -159,7 +185,14 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None):
                 "Successfully saved prediction results to {}".format(save_path)
             )
 
-    test_meter.finalize_metrics()
+    print("\n", "-"*20, "Summary", "-"*20)
+    latency = total_time / total_sample * 1000
+    throughput = total_sample / total_time
+    print("inference Latency: {} ms".format(latency))
+    print("inference Throughput: {} samples/s".format(throughput))
+    exit(0)
+
+    # test_meter.finalize_metrics()
     return test_meter
 
 
@@ -240,7 +273,21 @@ def test(cfg):
         writer = None
 
     # # Perform multi-view test on the entire dataset.
-    test_meter = perform_test(test_loader, model, test_meter, cfg, writer)
+    if cfg.profile:
+        with torch.profiler.profile(
+            activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
+            record_shapes=True,
+            schedule=torch.profiler.schedule(
+                wait=int(cfg.num_iter/2),
+                warmup=2,
+                active=1,
+            ),
+            on_trace_ready=trace_handler,
+        ) as p:
+            test_meter = perform_test(test_loader, model, test_meter, cfg, writer, p=p)
+    else:
+        test_meter = perform_test(test_loader, model, test_meter, cfg, writer)
+
     if writer is not None:
         writer.close()
     result_string = (
@@ -259,3 +306,18 @@ def test(cfg):
     logger.info("testing done: {}".format(result_string))
 
     return result_string
+
+def trace_handler(p):
+    output = p.key_averages().table(sort_by="self_cpu_time_total")
+    print(output)
+    import pathlib
+    timeline_dir = str(pathlib.Path.cwd()) + '/timeline/'
+    if not os.path.exists(timeline_dir):
+        try:
+            os.makedirs(timeline_dir)
+        except:
+            pass
+    timeline_file = timeline_dir + 'timeline-' + str(torch.backends.quantized.engine) + '-' + \
+                'SlowFast-' + str(p.step_num) + '-' + str(os.getpid()) + '.json'
+    p.export_chrome_trace(timeline_file)
+

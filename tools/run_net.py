@@ -10,6 +10,7 @@ from demo_net import demo
 from test_net import test
 from train_net import train
 from visualization import visualize
+import torch
 
 
 def main():
@@ -23,11 +24,12 @@ def main():
 
         # extra setting for oob
         cfg.TRAIN.ENABLE = False
+        cfg.LOG_MODEL_INFO = False
         cfg.NUM_GPUS = 0
         cfg.DATA.DECODING_BACKEND = 'pyav'
-        cfg.DATA.PATH_PREFIX = '/home2/pytorch-broad-models/pytorchvideo/tiny-Kinetics-400'
+        cfg.DATA.PATH_PREFIX = args.dataset_dir
         cfg.DATA.PATH_LABEL_SEPARATOR = ','
-        cfg.TEST.BATCH_SIZE = 1
+        cfg.TEST.BATCH_SIZE = args.batch_size
 
         # Perform training.
         if cfg.TRAIN.ENABLE:
@@ -35,7 +37,16 @@ def main():
 
         # Perform multi-clip testing.
         if cfg.TEST.ENABLE:
-            launch_job(cfg=cfg, init_method=args.init_method, func=test)
+            if cfg.precision == "bfloat16":
+                print("---- Use AMP bfloat16")
+                with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
+                    launch_job(cfg=cfg, init_method=args.init_method, func=test)
+            elif cfg.precision == "float16":
+                print("---- Use AMP float16")
+                with torch.cuda.amp.autocast(enabled=True, dtype=torch.float16):
+                    launch_job(cfg=cfg, init_method=args.init_method, func=test)
+            else:
+                launch_job(cfg=cfg, init_method=args.init_method, func=test)
 
         # Perform model visualization.
         if cfg.TENSORBOARD.ENABLE and (
