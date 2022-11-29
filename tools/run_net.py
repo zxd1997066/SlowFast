@@ -21,6 +21,14 @@ def main():
     for path_to_config in args.cfg_files:
         cfg = load_config(args, path_to_config)
 
+        # extra setting for oob
+        cfg.TRAIN.ENABLE = False
+        cfg.NUM_GPUS = 0
+        cfg.DATA.DECODING_BACKEND = 'pyav'
+        cfg.DATA.PATH_PREFIX = '/home2/pytorch-broad-models/pytorchvideo/tiny-Kinetics-400'
+        cfg.DATA.PATH_LABEL_SEPARATOR = ','
+        cfg.TEST.BATCH_SIZE = 1
+
         # Perform training.
         if cfg.TRAIN.ENABLE:
             launch_job(cfg=cfg, init_method=args.init_method, func=train)
