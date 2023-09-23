@@ -23,7 +23,7 @@ setup(
         "pandas",
         # "torchvision>=0.4.2",
         "pillow",
-        "sklearn",
+        #"sklearn",
         "tensorboard",
         "fairscale",
     ],
