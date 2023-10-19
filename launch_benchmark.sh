@@ -18,7 +18,7 @@ function main {
         set -x
     fi
     pip uninstall -y slowfast
-    #python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
+    python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
     pip install -e .
 
     # if multiple use 'xxx,xxx,xxx'
