@@ -45,6 +45,8 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, p=None):
     """
     # Enable eval mode.
     model.eval()
+    if cfg.compile:
+        model = torch.compile(model, backend=cfg.backend, options={"freezing": True})
     # CL
     if cfg.channels_last:
         model = model.to(memory_format=torch.channels_last_3d)
