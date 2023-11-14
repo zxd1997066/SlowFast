@@ -70,6 +70,10 @@ def parse_args():
     parser.add_argument('--quantized_engine', type=str, default=None, help='quantized_engine')
     parser.add_argument('--ipex', dest='ipex', action='store_true', help='ipex')
     parser.add_argument('--jit', dest='jit', action='store_true', help='jit')
+    parser.add_argument("--compile", action='store_true', default=False,
+                    help="enable torch.compile")
+    parser.add_argument("--backend", type=str, default='inductor',
+                    help="enable torch.compile backend")
 
     if len(sys.argv) == 1:
         parser.print_help()
