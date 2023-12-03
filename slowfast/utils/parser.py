@@ -114,6 +114,8 @@ def load_config(args, path_to_config=None):
     cfg.quantized_engine = args.quantized_engine
     cfg.ipex = args.ipex
     cfg.jit = args.jit
+    cfg.compile = args.compile
+    cfg.backend = args.backend
 
     # Create the checkpoint dir.
     cu.make_checkpoint_dir(cfg.OUTPUT_DIR)
