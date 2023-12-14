@@ -39,11 +39,11 @@ def main():
         if cfg.TEST.ENABLE:
             if cfg.precision == "bfloat16":
                 print("---- Use AMP bfloat16")
-                with torch.cpu.amp.autocast(enabled=True, dtype=torch.bfloat16):
+                with torch.autocast(device_type="cuda" if torch.cuda.is_available() else "cpu", enabled=True, dtype=torch.bfloat16):
                     launch_job(cfg=cfg, init_method=args.init_method, func=test)
             elif cfg.precision == "float16":
                 print("---- Use AMP float16")
-                with torch.cpu.amp.autocast(enabled=True, dtype=torch.half):
+                with torch.autocast(device_type="cuda" if torch.cuda.is_available() else "cpu", enabled=True, dtype=torch.half):
                     launch_job(cfg=cfg, init_method=args.init_method, func=test)
             else:
                 launch_job(cfg=cfg, init_method=args.init_method, func=test)
