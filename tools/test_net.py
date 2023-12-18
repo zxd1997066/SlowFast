@@ -45,6 +45,9 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, p=None):
     """
     # Enable eval mode.
     model.eval()
+
+    if torch.cuda.is_available():
+        model = model.cuda()
     if cfg.compile:
         model = torch.compile(model, backend=cfg.backend, options={"freezing": True})
     # CL
@@ -70,7 +73,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, p=None):
             else:
                 inputs = inputs.cuda(non_blocking=True)
             # Transfer the data to the current GPU device.
-            labels = labels.cuda()
+            labels = labels
             video_idx = video_idx.cuda()
             for key, val in meta.items():
                 if isinstance(val, (list,)):

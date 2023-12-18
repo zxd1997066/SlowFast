@@ -20,6 +20,9 @@ function main {
     pip uninstall -y slowfast
     python -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
     pip install -e .
+    if [ "${device}" == "cuda" ];then
+        pip install opencv-python==4.8.0.74
+    fi
 
     # if multiple use 'xxx,xxx,xxx'
     model_name_list=($(echo "${model_name}" |sed 's/,/ /g'))
