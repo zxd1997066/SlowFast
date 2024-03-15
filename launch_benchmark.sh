@@ -42,7 +42,11 @@ function main {
         for batch_size in ${batch_size_list[@]}
         do
             if [ $batch_size -le 0 ];then
-                batch_size=16
+                if [ "${model_name}" == "MViT_B" || "${model_name}" == "MVITv2_S" ];then
+                    batch_size=16
+                else
+                    batch_size=256
+                fi
             fi
             # clean workspace
             logs_path_clean
