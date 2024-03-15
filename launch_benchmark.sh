@@ -45,7 +45,7 @@ function main {
                 if [ "${model_name}" == "MViT_B" || "${model_name}" == "MVITv2_S" ];then
                     batch_size=16
                 else
-                    batch_size=256
+                    batch_size=64
                 fi
             fi
             # clean workspace
