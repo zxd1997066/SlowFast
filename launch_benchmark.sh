@@ -42,7 +42,9 @@ function main {
         for batch_size in ${batch_size_list[@]}
         do
             if [ $batch_size -le 0 ];then
-                if [ "${model_name}" == "MViT_B" ] || [ "${model_name}" == "MVITv2_S" ];then
+                if [ "${model_name}" == "MViT_B" ];then
+                    batch_size=16
+                elif [ "${model_name}" == "MVITv2_S" ];then
                     batch_size=16
                 else
                     batch_size=64
