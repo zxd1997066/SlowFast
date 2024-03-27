@@ -279,7 +279,9 @@ def test(cfg):
 
     # # Perform multi-view test on the entire dataset.
     if cfg.profile:
-        torch._inductor.config.enable_kernel_profile=True
+        import torch._inductor
+        torch._inductor.config.profiler_mark_wrapper_call = True
+        torch._inductor.config.cpp.enable_kernel_profile = True
         with torch.profiler.profile(
             activities=[torch.profiler.ProfilerActivity.CPU, torch.profiler.ProfilerActivity.CUDA],
             record_shapes=True,
