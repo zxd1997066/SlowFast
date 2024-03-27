@@ -8,6 +8,7 @@ import os
 import time
 import pickle
 import torch
+import torch._inductor
 
 import slowfast.utils.checkpoint as cu
 import slowfast.utils.distributed as du
@@ -279,7 +280,6 @@ def test(cfg):
 
     # # Perform multi-view test on the entire dataset.
     if cfg.profile:
-        import torch._inductor
         torch._inductor.config.profiler_mark_wrapper_call = True
         torch._inductor.config.cpp.enable_kernel_profile = True
         with torch.profiler.profile(
