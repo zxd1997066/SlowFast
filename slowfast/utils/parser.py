@@ -74,7 +74,8 @@ def parse_args():
                     help="enable torch.compile")
     parser.add_argument("--backend", type=str, default='inductor',
                     help="enable torch.compile backend")
-
+    parser.add_argument("--triton_cpu", action='store_true', default=False,
+                    help="enable triton_cpu")
     if len(sys.argv) == 1:
         parser.print_help()
     return parser.parse_args()
@@ -116,6 +117,7 @@ def load_config(args, path_to_config=None):
     cfg.jit = args.jit
     cfg.compile = args.compile
     cfg.backend = args.backend
+    cfg.triton_cpu = args.triton_cpu
 
     # Create the checkpoint dir.
     cu.make_checkpoint_dir(cfg.OUTPUT_DIR)
