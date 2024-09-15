@@ -30,7 +30,10 @@ def main():
         cfg.DATA.PATH_PREFIX = args.dataset_dir
         cfg.DATA.PATH_LABEL_SEPARATOR = ','
         cfg.TEST.BATCH_SIZE = args.batch_size
-
+        if cfg.triton_cpu:
+            print("run with triton cpu backend")
+            import torch._inductor.config
+            torch._inductor.config.cpu_backend="triton"
         # Perform training.
         if cfg.TRAIN.ENABLE:
             launch_job(cfg=cfg, init_method=args.init_method, func=train)
