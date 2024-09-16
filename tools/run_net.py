@@ -39,6 +39,7 @@ def main():
             launch_job(cfg=cfg, init_method=args.init_method, func=train)
 
         # Perform multi-clip testing.
+        import torch
         if cfg.TEST.ENABLE:
             if cfg.precision == "bfloat16":
                 print("---- Use AMP bfloat16")
