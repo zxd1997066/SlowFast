@@ -46,7 +46,7 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, p=None):
     """
     # Enable eval mode.
     model.eval()
-
+    import torch
     if torch.cuda.is_available():
         model = model.cuda()
     if cfg.compile:
