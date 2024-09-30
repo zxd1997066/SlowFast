@@ -50,12 +50,12 @@ def perform_test(test_loader, model, test_meter, cfg, writer=None, p=None):
     if torch.cuda.is_available():
         model = model.cuda()
     if cfg.compile:
-        if cfg.backend == "zentorch":
-            import zentorch
-            import torch
-            model = torch.compile(model, backend=cfg.backend, dynamic=False)
-        else:
-            model = torch.compile(model, backend=cfg.backend, options={"freezing": True})
+        # if cfg.backend == "zentorch":
+        #     import zentorch
+        #     import torch
+        #     model = torch.compile(model, backend=cfg.backend, dynamic=False)
+        # else:
+        model = torch.compile(model, backend=cfg.backend, options={"freezing": True})
     # CL
     if cfg.channels_last:
         model = model.to(memory_format=torch.channels_last_3d)
